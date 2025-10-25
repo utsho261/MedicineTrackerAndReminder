@@ -1,0 +1,49 @@
+<resources>
+    <!-- App -->
+    <string name="app_name">Medicine Tracker and Reminder</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Medicine Tracker</string>
+    <string name="dashboard_date">Wednesday, September 3, 2025</string>
+
+    <!-- Menu -->
+    <string name="calendar">Calendar</string>
+    <string name="my_meds">My Meds</string>
+    <string name="profile">Profile</string>
+
+    <!-- Stat cards -->
+    <string name="progress">Today\'s Progress</string>
+    <string name="upcoming">Upcoming</string>
+    <string name="missed">Missed</string>
+    <string name="low_stock">Low Stock</string>
+
+    <!-- Values -->
+    <string name="progress_value">0/0</string>
+    <string name="zero_value">0</string>
+
+    <!-- Schedule -->
+    <string name="todays_schedule">Today\'s Schedule</string>
+    <string name="no_meds">No medications scheduled for today</string>
+    <string name="add_first_med">Add your first medicine</string>
+
+    <!-- Calendar Activity -->
+    <string name="medication_calendar">Medication Calendar</string>
+    <string name="track_medication">Track your medication adherence</string>
+    <string name="select_a_date">Select a Date</string>
+    <string name="click_to_see_meds">Click on a date to see medication details</string>
+    <string name="selected_date">Selected: %1$s</string>
+
+
+    <string name="manage_meds">Manage your medication list</string>
+    <string name="search_meds">Search medications...</string>
+    <string name="no_meds_added">No medications added yet</string>
+    <string name="add_medicine">Add Medicine</string>
+
+    <string name="personal_information_title">Personal Information</string>
+    <string name="profile_icon">Profile icon</string>
+    <string name="full_name_label">Full Name</string>
+    <string name="email_label">Email</string>
+    <string name="phone_label">Phone</string>
+    <string name="dob_label">Date of Birth</string>
+    <string name="emergency_contact_label">Emergency Contact</string>
+</resources>
