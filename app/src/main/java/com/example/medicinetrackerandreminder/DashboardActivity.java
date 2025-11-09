@@ -11,8 +11,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import com.example.medicinetrackerandreminder.database.DatabaseHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+<<<<<<< HEAD
 import com.google.android.material.button.MaterialButton;
 
+=======
+>>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -77,6 +80,7 @@ public class DashboardActivity extends AppCompatActivity {
         findViewById(R.id.cardLowStock)
                 .setOnClickListener(v -> showListDialog("Low‑Stock Medicines", db.getLowStockMedicines()));
 
+<<<<<<< HEAD
         findViewById(R.id.cardProgress)
                 .setOnClickListener(v -> {
                     List<String> todayMeds = db.getMedicinesForToday();
@@ -89,6 +93,8 @@ public class DashboardActivity extends AppCompatActivity {
 
 
 
+=======
+>>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
         refresh();
 
         // === Bottom Navigation ===

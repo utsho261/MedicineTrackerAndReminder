@@ -309,7 +309,10 @@
                             android:layout_height="wrap_content"
                             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                             android:text="ADD YOUR FIRST MEDICINE"/>
+<<<<<<< HEAD
 
+=======
+>>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
                     </LinearLayout>
 
                     <!-- Dynamic medicine list -->
