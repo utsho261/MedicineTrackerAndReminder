@@ -66,7 +66,6 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
 
         // Delete directly
         holder.btnDelete.setOnClickListener(v -> {
-<<<<<<< HEAD
             new androidx.appcompat.app.AlertDialog.Builder(context)
                     .setTitle("Delete Medicine")
                     .setMessage("Are you sure you want to delete this medicine?")
@@ -83,17 +82,6 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
                     })
                     .setNegativeButton("Cancel", null)
                     .show();
-=======
-            DatabaseHelper db = new DatabaseHelper(context);
-            boolean deleted = db.deleteMedicineByName(med.getName());
-            if(deleted){
-                medicines.remove(pos);
-                notifyItemRemoved(pos);
-                Toast.makeText(context, "Medicine deleted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(context, "Failed to delete", Toast.LENGTH_SHORT).show();
-            }
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
         });
     }
 

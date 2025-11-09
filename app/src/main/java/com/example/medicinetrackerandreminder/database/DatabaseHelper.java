@@ -5,13 +5,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-<<<<<<< HEAD
 
 import com.example.medicinetrackerandreminder.Medicine;
 
-=======
-import com.example.medicinetrackerandreminder.Medicine;
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -23,11 +19,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "medicine_tracker.db";
     private static final int DATABASE_VERSION = 3;
 
-<<<<<<< HEAD
-    // USERS TABLE
-=======
     // ===== USERS TABLE =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     private static final String TABLE_USERS = "users";
     private static final String USER_ID = "id";
     private static final String USER_FNAME = "firstName";
@@ -37,11 +29,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String USER_EMAIL = "email";
     private static final String USER_PASSWORD = "password";
 
-<<<<<<< HEAD
-    // MEDICINES TABLE
-=======
     // ===== MEDICINES TABLE =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     private static final String TABLE_MEDICINES = "medicines";
     private static final String MED_ID = "id";
     private static final String MED_NAME = "name";
@@ -56,12 +44,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String MED_COLOR = "color";
     private static final String MED_NOTES = "notes";
 
-<<<<<<< HEAD
+    // Used when a specific date is selected in a calendar view
     public String selectedDateGlobal = null;
 
-
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -101,11 +86,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-<<<<<<< HEAD
-    /** Utility functions */
-=======
-    // ===== Helper Methods =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+    // ===== Utility Methods =====
     public static String formatDate(String input) {
         try {
             SimpleDateFormat src = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
@@ -120,11 +101,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
     }
 
-<<<<<<< HEAD
-    /** User registration & login */
-=======
-    // ===== User Methods =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+    // ===== User Management =====
     public boolean registerUser(String f, String l, String dob,
                                 String phone, String email, String password) {
         SQLiteDatabase db = this.getWritableDatabase();
@@ -160,11 +137,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return valid;
     }
 
-<<<<<<< HEAD
-    /** Get one user for profile screen */
-=======
-    /** Retrieve one user by phone or email */
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public Cursor getUser(String idOrEmail) {
         SQLiteDatabase db = this.getReadableDatabase();
         return db.rawQuery(
@@ -172,18 +144,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{idOrEmail, idOrEmail});
     }
 
-<<<<<<< HEAD
-    /** Insert new medicine record */
-    public boolean addMedicine(String name, String type, String dosage,
-                               String start, String end, int stock, int lowStock,
-                               String freq, String times, int color, String notes) {
-=======
-    // ===== Medicines Section =====
+    // ===== Medicines =====
     public boolean addMedicine(String name, String type, String dosage,
                                String start, String end, int stock, int lowStock,
                                String freq, String times, int color, String notes) {
 
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(MED_NAME, name);
@@ -210,129 +175,87 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return exists;
     }
 
-<<<<<<< HEAD
-    /** Medicines due for today */
-=======
-    // ===== Medicine Lists =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+    // ===== Medicine Queries =====
     public List<String> getMedicinesForToday() {
         String today = todayDate();
         SQLiteDatabase db = this.getReadableDatabase();
         List<String> list = new ArrayList<>();
 
         Cursor c = db.rawQuery(
-                "SELECT name, dosage, times, endDate FROM " + TABLE_MEDICINES +
+                "SELECT name, dosage, times FROM " + TABLE_MEDICINES +
                         " WHERE startDate <= ? AND (endDate IS NULL OR endDate='' OR endDate >= ?)",
                 new String[]{today, today});
 
         while (c.moveToNext()) {
-            String name  = c.getString(0);
-            String dose  = c.getString(1);
+            String name = c.getString(0);
+            String dose = c.getString(1);
             String times = c.getString(2);
-<<<<<<< HEAD
-            String remaining = getNextRemainingTime(times);
-            if (remaining.startsWith("All") || remaining.startsWith("00:00:00"))
-                continue;
-=======
-            String end   = c.getString(3);
             String remaining = getNextRemainingTime(times);
 
             // skip anything that has no remaining time today
             if (remaining.startsWith("All") || remaining.startsWith("00:00:00"))
                 continue;
 
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
             list.add(name + " (" + dose + ") - " + remaining);
         }
         c.close();
         return list;
     }
 
-<<<<<<< HEAD
-    /** Medicines scheduled for a chosen date */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public List<String> getMedicinesForDate(String date) {
         SQLiteDatabase db = this.getReadableDatabase();
         List<String> list = new ArrayList<>();
-        Cursor c = db.rawQuery("SELECT name, dosage, times FROM " + TABLE_MEDICINES +
+        Cursor c = db.rawQuery(
+                "SELECT name, dosage, times FROM " + TABLE_MEDICINES +
                         " WHERE startDate <= ? AND (endDate IS NULL OR endDate='' OR endDate >= ?)",
                 new String[]{date, date});
         while (c.moveToNext()) {
             String name = c.getString(0);
             String dosage = c.getString(1);
             String times = c.getString(2);
-<<<<<<< HEAD
-            list.add(name + " (" + dosage + ")");
-=======
             list.add(name + " (" + dosage + ") - " + getNextRemainingTime(times));
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
         }
         c.close();
         return list;
     }
 
-<<<<<<< HEAD
-    /** Compute time until next medicine intake */
-=======
-    // ===== Helper for Remaining Time =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     private String getNextRemainingTime(String times) {
-        if (times == null || times.isEmpty()) return "No times set";
+        if (times == null || times.isEmpty())
+            return "No times set";
+
         try {
             Date now = new Date();
             long nowMs = now.getTime();
 
             SimpleDateFormat sdfTime = new SimpleDateFormat("hh:mm a", Locale.getDefault());
             SimpleDateFormat sdfFull = new SimpleDateFormat("yyyy-MM-dd hh:mm a", Locale.getDefault());
-<<<<<<< HEAD
-            String todayStr = (selectedDateGlobal != null) ? selectedDateGlobal :
-                    new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-=======
-            String todayStr = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now);
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+            String todayStr = (selectedDateGlobal != null)
+                    ? selectedDateGlobal
+                    : new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
             for (String t : times.split(",")) {
                 Date full = sdfFull.parse(todayStr + " " + t.trim());
                 if (full == null) continue;
-<<<<<<< HEAD
-                if (full.getTime() > nowMs) { // this means full is in the future relative to the start of selected day
+                if (full.getTime() > nowMs) {
                     long diff = full.getTime() - nowMs;
                     long hrs = diff / (1000 * 60 * 60);
                     long mins = (diff / (1000 * 60)) % 60;
                     long secs = (diff / 1000) % 60;
                     return String.format(Locale.getDefault(), "Remaining: %02d:%02d:%02d", hrs, mins, secs);
                 }
-
-=======
-
-                if (full.getTime() > nowMs) {
-                    long diff = full.getTime() - nowMs;
-                    long hrs  = diff / (1000 * 60 * 60);
-                    long mins = (diff / (1000 * 60)) % 60;
-                    long secs = (diff / 1000) % 60;
-                    return String.format(Locale.getDefault(),
-                            "Remaining: %02d:%02d:%02d", hrs, mins, secs);
-                }
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
             }
             return "All times passed";
         } catch (Exception e) {
             return "Time error";
         }
     }
-<<<<<<< HEAD
 
-    /** Future medication courses */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public List<String> getUpcomingMedicines() {
         String today = todayDate();
         SQLiteDatabase db = this.getReadableDatabase();
         List<String> list = new ArrayList<>();
         Cursor c = db.rawQuery(
-                "SELECT name, dosage FROM " + TABLE_MEDICINES +
-                        " WHERE startDate > ?", new String[]{today});
+                "SELECT name, dosage FROM " + TABLE_MEDICINES + " WHERE startDate > ?", new String[]{today});
         while (c.moveToNext()) {
             list.add(c.getString(0) + " (" + c.getString(1) + ")");
         }
@@ -340,10 +263,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-<<<<<<< HEAD
-    /** Past medication courses */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public List<String> getMissedMedicines() {
         String today = todayDate();
         SQLiteDatabase db = this.getReadableDatabase();
@@ -359,10 +278,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-<<<<<<< HEAD
-    /** Low-stock medicine list */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public List<String> getLowStockMedicines() {
         SQLiteDatabase db = this.getReadableDatabase();
         List<String> list = new ArrayList<>();
@@ -376,10 +291,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-<<<<<<< HEAD
-    /** Counts for dashboard */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+    // ===== Dashboard Counts =====
     public int getAllMedicinesCount() {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_MEDICINES, null);
@@ -390,18 +302,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public int getLowStockCount() {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_MEDICINES +
-                " WHERE currentStock <= lowStockAlert", null);
+        Cursor c = db.rawQuery(
+                "SELECT COUNT(*) FROM " + TABLE_MEDICINES + " WHERE currentStock <= lowStockAlert", null);
         int count = c.moveToFirst() ? c.getInt(0) : 0;
         c.close();
         return count;
     }
 
-<<<<<<< HEAD
-    /** List <Medicine> variants for RecyclerViews */
-=======
     // ===== Medicine Object Lists =====
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
+    public boolean deleteMedicineByName(String name) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        int result = db.delete(TABLE_MEDICINES, "name=?", new String[]{name});
+        return result > 0;
+    }
+
     public List<Medicine> getAllMedicineObjects() {
         SQLiteDatabase db = this.getReadableDatabase();
         List<Medicine> list = new ArrayList<>();
@@ -410,12 +324,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (c.moveToFirst()) {
             do {
                 list.add(new Medicine(
-                        c.getString(0),
-                        c.getString(1),
-                        c.getString(2),
-                        c.getInt(3),
-                        c.getString(4),
-                        c.getString(5)
+                        c.getString(0), c.getString(1), c.getString(2),
+                        c.getInt(3), c.getString(4), c.getString(5)
                 ));
             } while (c.moveToNext());
         }
@@ -423,20 +333,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-<<<<<<< HEAD
-    /** Delete a medicine */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
-    public boolean deleteMedicineByName(String name) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        int result = db.delete(TABLE_MEDICINES, "name=?", new String[]{name});
-        return result > 0;
-    }
-
-<<<<<<< HEAD
-    /** Object lists used on specific date filters */
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     public List<Medicine> getMedicinesForTodayObjects() {
         return getMedicinesForDateObjects(todayDate());
     }
@@ -451,12 +347,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (c.moveToFirst()) {
             do {
                 list.add(new Medicine(
-                        c.getString(0),
-                        c.getString(1),
-                        c.getString(2),
-                        c.getInt(3),
-                        c.getString(4),
-                        c.getString(5)
+                        c.getString(0), c.getString(1), c.getString(2),
+                        c.getInt(3), c.getString(4), c.getString(5)
                 ));
             } while (c.moveToNext());
         }

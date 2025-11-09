@@ -3,23 +3,21 @@ package com.example.medicinetrackerandreminder;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.TextView;
-<<<<<<< HEAD
 import androidx.appcompat.app.AlertDialog;
-
-=======
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
-
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.medicinetrackerandreminder.database.DatabaseHelper;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class CalendarActivity extends AppCompatActivity {
     DatabaseHelper db;
     MaterialCalendarView calendarView;
-    TextView tvSelectedDate,tvInstruction;
+    TextView tvSelectedDate, tvInstruction;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,40 +29,32 @@ public class CalendarActivity extends AppCompatActivity {
         tvSelectedDate = findViewById(R.id.tvSelectedDate);
         tvInstruction = findViewById(R.id.tvInstruction);
 
-<<<<<<< HEAD
         calendarView.setOnDateChangedListener((widget, date, selected) -> {
-            java.text.SimpleDateFormat df = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
-            java.util.Calendar cal = java.util.Calendar.getInstance();
+            // build proper yyyy-MM-dd string so it's consistent with database format
+            Calendar cal = Calendar.getInstance();
             cal.set(date.getYear(), date.getMonth(), date.getDay());
-            String formattedDate = df.format(cal.getTime());
+            String formattedDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(cal.getTime());
 
             tvSelectedDate.setText(getString(R.string.selected_date, formattedDate));
 
             List<String> meds = db.getMedicinesForDate(formattedDate);
+
             if (meds.isEmpty()) {
                 new AlertDialog.Builder(this)
                         .setTitle("No Medications")
-                        .setMessage("No medications today")
+                        .setMessage("No medications scheduled for this day.")
                         .setPositiveButton("OK", null)
                         .show();
+                tvInstruction.setText("No medications today");
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle("Medicines for " + formattedDate)
                         .setItems(meds.toArray(new String[0]), null)
                         .setPositiveButton("OK", null)
                         .show();
+                tvInstruction.setText(TextUtils.join("\n", meds));
             }
         });
-
-
-=======
-        calendarView.setOnDateChangedListener((widget,date,selected)->{
-            String d=date.getDay()+"/"+date.getMonth()+"/"+date.getYear();
-            tvSelectedDate.setText("Selected: "+d);
-            List<String> meds=db.getMedicinesForDate(d);
-            if(meds.isEmpty()) tvInstruction.setText("No medications today");
-            else tvInstruction.setText(TextUtils.join("\n",meds));
-        });
->>>>>>> 6e0eac1e567fa77c22dd282e100fd17e0e462d85
     }
 }
