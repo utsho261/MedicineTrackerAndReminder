@@ -213,7 +213,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String name = c.getString(0);
             String dosage = c.getString(1);
             String times = c.getString(2);
-            list.add(name + " (" + dosage + ") - " + getNextRemainingTime(times));
+            list.add(name + " (" + dosage + ")");
         }
         c.close();
         return list;
