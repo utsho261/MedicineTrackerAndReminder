@@ -2,9 +2,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:background="@drawable/input_bg"
-    android:layout_marginBottom="8dp">
+    android:padding="16dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card_white_rounded">
 
     <TextView
         android:id="@+id/tvMedName"
@@ -12,50 +12,76 @@
         android:layout_height="wrap_content"
         android:text="Medicine Name"
         android:textStyle="bold"
-        android:textSize="18sp"
-        android:layout_marginBottom="4dp"/>
+        android:textSize="20sp"
+        android:textColor="@color/black"
+        android:layout_marginBottom="6dp"/>
 
     <TextView
         android:id="@+id/tvDosage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Dosage: "
-        android:layout_marginBottom="2dp"/>
+        android:text="Dosage:"
+        android:textColor="@color/black"/>
 
     <TextView
         android:id="@+id/tvType"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Type: Tablet"
-        android:layout_marginBottom="2dp"/>
+        android:text="Type:"
+        android:textColor="@color/black"/>
 
     <TextView
         android:id="@+id/tvTimes"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Times: 08:00 AM, 08:00 PM"
-        android:layout_marginBottom="2dp"/>
+        android:text="Times:"
+        android:textColor="@color/black"/>
 
     <TextView
         android:id="@+id/tvNotes"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Notes"
-        android:layout_marginBottom="2dp"/>
+        android:text="Notes:"
+        android:textColor="@color/black"/>
 
     <TextView
         android:id="@+id/tvStock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Stock: "
-        android:textColor="@android:color/holo_red_dark"
-        android:layout_marginBottom="8dp"/>
+        android:text="Current Stock:"
+        android:textColor="@android:color/holo_green_dark"
+        android:layout_marginBottom="2dp"/>
 
-    <Button
-        android:id="@+id/btnDeleteMed"
+    <TextView
+        android:id="@+id/tvLowStock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Delete"
-        android:backgroundTint="@android:color/holo_red_dark"
-        android:textColor="@android:color/white"/>
+        android:text="Low Stock Alert:"
+        android:textColor="@android:color/holo_orange_dark"
+        android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnEditMed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="EDIT"
+            android:backgroundTint="@color/teal_primary"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnDeleteMed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="DELETE"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:textColor="@android:color/white"/>
+    </LinearLayout>
 </LinearLayout>

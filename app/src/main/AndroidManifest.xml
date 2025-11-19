@@ -1,14 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.medicinetrackerandreminder">
 
+    <!-- Permission for notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
+        android:name=".MedicineTrackerApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.MedicineTracker">
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".DashboardActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -16,11 +21,18 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".RegisterActivity" />
-        <activity android:name=".DashboardActivity" />
         <activity android:name=".AddMedicineActivity" />
         <activity android:name=".CalendarActivity" />
         <activity android:name=".MyMedsActivity" />
         <activity android:name=".ProfileActivity" />
+        <activity android:name=".EditProfileActivity" />
+
+        <!-- Tell Android about your Receivers -->
+        <receiver
+            android:name=".receivers.MedicineAlarmReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".receivers.MedicineActionReceiver"
+            android:exported="false" />
     </application>
 </manifest>

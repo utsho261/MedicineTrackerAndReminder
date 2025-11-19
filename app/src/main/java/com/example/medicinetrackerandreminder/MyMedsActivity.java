@@ -58,6 +58,9 @@ public class MyMedsActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.nav_meds) {
                 return true;
+            } else if (id == R.id.nav_profile) {
+                startActivity(new Intent(MyMedsActivity.this, ProfileActivity.class));
+                return true;
             }
             return false;
         });

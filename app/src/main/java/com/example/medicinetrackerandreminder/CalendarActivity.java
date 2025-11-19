@@ -1,5 +1,6 @@
 package com.example.medicinetrackerandreminder;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.TextView;
@@ -7,6 +8,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.medicinetrackerandreminder.database.DatabaseHelper;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView;
 
 import java.text.SimpleDateFormat;
@@ -29,8 +31,27 @@ public class CalendarActivity extends AppCompatActivity {
         tvSelectedDate = findViewById(R.id.tvSelectedDate);
         tvInstruction = findViewById(R.id.tvInstruction);
 
+        // Set up navigation once
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(CalendarActivity.this, DashboardActivity.class));
+                return true;
+            } else if (id == R.id.nav_calendar) {
+                return true;
+            } else if (id == R.id.nav_meds) {
+                startActivity(new Intent(CalendarActivity.this, MyMedsActivity.class));
+                return true;
+            } else if (id == R.id.nav_profile) {
+                startActivity(new Intent(CalendarActivity.this, ProfileActivity.class));
+                return true;
+            }
+            return false;
+        });
+
         calendarView.setOnDateChangedListener((widget, date, selected) -> {
-            // build proper yyyy-MM-dd string so it's consistent with database format
+            // Remainder of your date selection code here...
             Calendar cal = Calendar.getInstance();
             cal.set(date.getYear(), date.getMonth(), date.getDay());
             String formattedDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -57,4 +78,5 @@ public class CalendarActivity extends AppCompatActivity {
             }
         });
     }
+
 }

@@ -1,101 +1,111 @@
 package com.example.medicinetrackerandreminder;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.example.medicinetrackerandreminder.database.DatabaseHelper;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private SwitchMaterial swPush, swDark, swSound;
-    private MaterialButton btnClear, btnSignOut;
+    private SwitchMaterial swDark;
+    private MaterialButton btnEdit, btnClear;
     private DatabaseHelper db;
     private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-        // Apply saved theme before showing UI
+        super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         ThemeManager.apply(prefs.getBoolean("darkMode", false));
 
-        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
         db = new DatabaseHelper(this);
+        swDark = findViewById(R.id.swDark);
+        btnEdit = findViewById(R.id.btnEditProfile);
+        btnClear = findViewById(R.id.btnClear);
 
-        // ===== Switches =====
-        swPush  = findViewById(R.id.swPush);
-        swDark  = findViewById(R.id.swDark);
-        swSound = findViewById(R.id.swSound);
-
-        // Dark mode switch
-        swDark.setChecked(prefs.getBoolean("darkMode", false));
-        swDark.setOnCheckedChangeListener((b, checked) -> {
-            prefs.edit().putBoolean("darkMode", checked).apply();
-            ThemeManager.apply(checked);
+        // ---- Dark mode toggle ----
+        boolean current = prefs.getBoolean("darkMode", false);
+        swDark.setChecked(current);
+        swDark.setOnCheckedChangeListener((button, isChecked) -> {
+            if (isChecked != current) {
+                prefs.edit().putBoolean("darkMode", isChecked).apply();
+                ThemeManager.apply(isChecked);
+            }
         });
 
-        // Other simple demo listeners
-        CompoundButton.OnCheckedChangeListener listener =
-                (btn, on) -> Toast.makeText(this,
-                        btn.getText() + (on ? " enabled" : " disabled"),
-                        Toast.LENGTH_SHORT).show();
-
-        swPush.setOnCheckedChangeListener(listener);
-        swSound.setOnCheckedChangeListener(listener);
-
-        // ===== Buttons =====
-        btnClear  = findViewById(R.id.btnClear);
-        btnSignOut= findViewById(R.id.btnSignOut);
-
-        btnClear.setOnClickListener(v ->
-                Toast.makeText(this, "All data cleared", Toast.LENGTH_SHORT).show());
-
-        btnSignOut.setOnClickListener(v -> {
-            Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        });
+        // Clear all data with confirmation
+        btnClear.setOnClickListener(v -> showConfirmDialog());
+        btnEdit.setOnClickListener(v ->
+                startActivity(new Intent(this, EditProfileActivity.class)));
 
         loadUserInfo();
+
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                startActivity(new Intent(this, DashboardActivity.class));
+                return true;
+            } else if (id == R.id.nav_calendar) {
+                startActivity(new Intent(this, CalendarActivity.class));
+                return true;
+            } else if (id == R.id.nav_meds) {
+                startActivity(new Intent(this, MyMedsActivity.class));
+                return true;
+            } else if (id == R.id.nav_profile) {
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void showConfirmDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Delete")
+                .setMessage("Are you sure you want to clear all data?")
+                .setPositiveButton("Yes", (DialogInterface dialog, int which) -> {
+                    SQLiteDatabase database = db.getWritableDatabase();
+                    database.delete("users", null, null);
+                    database.delete("medicines", null, null);
+                    database.delete("medicine_status", null, null);
+                    Toast.makeText(this, "All data cleared!", Toast.LENGTH_SHORT).show();
+                    recreate();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void loadUserInfo() {
-        String id = getIntent().getStringExtra("userId");
-
-        TextView tvName  = findViewById(R.id.tvFullName);
+        TextView tvName = findViewById(R.id.tvFullName);
         TextView tvEmail = findViewById(R.id.tvEmail);
         TextView tvPhone = findViewById(R.id.tvPhone);
-        TextView tvDob   = findViewById(R.id.tvDob);
+        TextView tvDob = findViewById(R.id.tvDob);
 
-        if (id == null || id.isEmpty()) {
-            tvName.setText("Unknown user");
-            tvEmail.setText("-");
-            tvPhone.setText("-");
-            tvDob.setText("-");
-            return;
+        try (var c = db.getSingleUserCursor()) {
+            if (c != null && c.moveToFirst()) {
+                tvName.setText(c.getString(0) + " " + c.getString(1));
+                tvDob.setText(c.getString(2));
+                tvPhone.setText(c.getString(3));
+                tvEmail.setText(c.getString(4));
+            } else {
+                tvName.setText("No profile yet");
+                tvEmail.setText("-");
+                tvPhone.setText("-");
+                tvDob.setText("-");
+            }
         }
-
-        Cursor c = db.getUser(id);
-        if (c != null && c.moveToFirst()) {
-            tvName.setText(c.getString(0) + " " + c.getString(1));
-            tvDob.setText(c.getString(2));
-            tvPhone.setText(c.getString(3));
-            tvEmail.setText(c.getString(4));
-        } else {
-            tvName.setText("User not found");
-            tvEmail.setText(id);
-            tvPhone.setText("-");
-            tvDob.setText("-");
-        }
-        if (c != null) c.close();
     }
 }

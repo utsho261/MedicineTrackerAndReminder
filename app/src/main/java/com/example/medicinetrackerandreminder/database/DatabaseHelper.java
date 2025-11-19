@@ -17,7 +17,7 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "medicine_tracker.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     // ===== USERS TABLE =====
     private static final String TABLE_USERS = "users";
@@ -44,7 +44,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String MED_COLOR = "color";
     private static final String MED_NOTES = "notes";
 
-    // Used when a specific date is selected in a calendar view
+    // ===== MEDICINE STATUS TABLE =====
+    private static final String TABLE_STATUS = "medicine_status";
+    private static final String STATUS_ID = "id";
+    private static final String STATUS_MED_NAME = "name";
+    private static final String STATUS_DATE = "date";
+    private static final String STATUS_TIME = "time";
+    private static final String STATUS_RESULT = "result";
+
+    // Used by calendar
     public String selectedDateGlobal = null;
 
     public DatabaseHelper(Context context) {
@@ -58,8 +66,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 USER_FNAME + " TEXT, " +
                 USER_LNAME + " TEXT, " +
                 USER_DOB + " TEXT, " +
-                USER_PHONE + " TEXT UNIQUE, " +
-                USER_EMAIL + " TEXT UNIQUE, " +
+                USER_PHONE + " TEXT, " +
+                USER_EMAIL + " TEXT, " +
                 USER_PASSWORD + " TEXT)";
         db.execSQL(CREATE_USERS);
 
@@ -77,16 +85,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 MED_COLOR + " INTEGER, " +
                 MED_NOTES + " TEXT)";
         db.execSQL(CREATE_MEDICINES);
+
+        String CREATE_STATUS = "CREATE TABLE " + TABLE_STATUS + " (" +
+                STATUS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                STATUS_MED_NAME + " TEXT, " +
+                STATUS_DATE + " TEXT, " +
+                STATUS_TIME + " TEXT, " +
+                STATUS_RESULT + " TEXT)";
+        db.execSQL(CREATE_STATUS);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_MEDICINES);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_STATUS);
         onCreate(db);
     }
 
-    // ===== Utility Methods =====
+    // ===== Utility =====
     public static String formatDate(String input) {
         try {
             SimpleDateFormat src = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
@@ -101,9 +118,38 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
     }
 
-    // ===== User Management =====
-    public boolean registerUser(String f, String l, String dob,
-                                String phone, String email, String password) {
+    // ===== Single-user helpers =====
+    public long getFirstUser() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT id FROM users ORDER BY id LIMIT 1", null);
+        long id = -1;
+        if (c.moveToFirst()) id = c.getLong(0);
+        c.close();
+        return id;
+    }
+
+    public long upsertSingleUser(String f, String l, String dob, String phone, String email) {
+        long first = getFirstUser();
+        if (first == -1) {
+            SQLiteDatabase db = this.getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(USER_FNAME, f);
+            cv.put(USER_LNAME, l);
+            cv.put(USER_DOB, dob);
+            cv.put(USER_PHONE, phone);
+            cv.put(USER_EMAIL, email);
+            return db.insert(TABLE_USERS, null, cv);
+        } else {
+            boolean ok = updateSingleUser(f, l, dob, phone, email);
+            return ok ? first : -1;
+        }
+    }
+
+    public boolean updateSingleUser(String f, String l, String dob, String phone, String email) {
+        long first = getFirstUser();
+        if (first == -1) {
+            return upsertSingleUser(f, l, dob, phone, email) != -1;
+        }
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put(USER_FNAME, f);
@@ -111,40 +157,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         cv.put(USER_DOB, dob);
         cv.put(USER_PHONE, phone);
         cv.put(USER_EMAIL, email);
-        cv.put(USER_PASSWORD, password);
-        long result = db.insert(TABLE_USERS, null, cv);
-        return result != -1;
+        int rows = db.update(TABLE_USERS, cv, "id=?", new String[]{String.valueOf(first)});
+        return rows > 0;
     }
 
-    public boolean userExists(String phone, String email) {
+    public Cursor getSingleUserCursor() {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT * FROM " + TABLE_USERS + " WHERE phone=? OR email=?",
-                new String[]{phone, email});
-        boolean exists = c.moveToFirst();
-        c.close();
-        return exists;
+        return db.rawQuery("SELECT firstName, lastName, dob, phone, email FROM users ORDER BY id LIMIT 1", null);
     }
 
-    public boolean login(String id, String password) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT * FROM " + TABLE_USERS +
-                        " WHERE (phone=? OR email=?) AND password=?",
-                new String[]{id, id, password});
-        boolean valid = c.moveToFirst();
-        c.close();
-        return valid;
-    }
-
-    public Cursor getUser(String idOrEmail) {
-        SQLiteDatabase db = this.getReadableDatabase();
-        return db.rawQuery(
-                "SELECT firstName, lastName, dob, phone, email FROM users WHERE phone=? OR email=?",
-                new String[]{idOrEmail, idOrEmail});
-    }
-
-    // ===== Medicines =====
+    // ===== Medicines and Status (unchanged) =====
     public boolean addMedicine(String name, String type, String dosage,
                                String start, String end, int stock, int lowStock,
                                String freq, String times, int color, String notes) {
@@ -168,15 +190,77 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public boolean medicineExists(String name) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM " + TABLE_MEDICINES + " WHERE name=?",
+        Cursor c = db.rawQuery("SELECT 1 FROM " + TABLE_MEDICINES + " WHERE name=?",
                 new String[]{name});
         boolean exists = c.moveToFirst();
         c.close();
         return exists;
     }
 
-    // ===== Medicine Queries =====
-    public List<String> getMedicinesForToday() {
+    public void markMedicineTaken(String name, String time, String date) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(STATUS_MED_NAME, name);
+        cv.put(STATUS_DATE, date);
+        cv.put(STATUS_TIME, time);
+        cv.put(STATUS_RESULT, "taken");
+        db.insert(TABLE_STATUS, null, cv);
+
+        decreaseMedicineStock(name);
+    }
+
+    public void markMedicineMissed(String name, String time, String date) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(STATUS_MED_NAME, name);
+        cv.put(STATUS_DATE, date);
+        cv.put(STATUS_TIME, time);
+        cv.put(STATUS_RESULT, "missed");
+        db.insert(TABLE_STATUS, null, cv);
+    }
+
+    public List<String> getTakenMedicinesForToday() {
+        String today = todayDate();
+        SQLiteDatabase db = this.getReadableDatabase();
+        List<String> list = new ArrayList<>();
+        Cursor c = db.rawQuery(
+                "SELECT name, time FROM " + TABLE_STATUS + " WHERE date=? AND result=?",
+                new String[]{today, "taken"});
+        while (c.moveToNext()) {
+            list.add(c.getString(0) + " (" + c.getString(1) + ")");
+        }
+        c.close();
+        return list;
+    }
+
+
+    private String getInstanceStatus(String name, String time, String date) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT result FROM " + TABLE_STATUS +
+                        " WHERE name=? AND time=? AND date=? ORDER BY id DESC LIMIT 1",
+                new String[]{name, time, date});
+        String status = null;
+        if (c.moveToFirst()) status = c.getString(0);
+        c.close();
+        return status; // taken | missed | null
+    }
+
+    public List<String> getMissedCardItemsForToday() {
+        String today = todayDate();
+        SQLiteDatabase db = this.getReadableDatabase();
+        List<String> list = new ArrayList<>();
+        Cursor c = db.rawQuery(
+                "SELECT name, time FROM medicine_status WHERE date=? AND result=? ORDER BY time",
+                new String[]{today, "missed"});
+        while (c.moveToNext()) {
+            list.add(c.getString(0) + " (" + c.getString(1) + ")");
+        }
+        c.close();
+        return list;
+    }
+
+    public List<String> getMedicinesForTodayDetailed() {
         String today = todayDate();
         SQLiteDatabase db = this.getReadableDatabase();
         List<String> list = new ArrayList<>();
@@ -190,13 +274,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String name = c.getString(0);
             String dose = c.getString(1);
             String times = c.getString(2);
-            String remaining = getNextRemainingTime(times);
 
-            // skip anything that has no remaining time today
-            if (remaining.startsWith("All") || remaining.startsWith("00:00:00"))
-                continue;
+            if (times == null || times.trim().isEmpty()) continue;
 
-            list.add(name + " (" + dose + ") - " + remaining);
+            for (String t : times.split(",")) {
+                String time = t.trim();
+                String remaining = getRemainingForSingleTime(time);
+                String status = getInstanceStatus(name, time, today);
+                String prefix = "";
+
+                if ("taken".equals(status)) prefix = "✔ ";
+                else if ("missed".equals(status)) prefix = "✖ ";
+
+                list.add(prefix + name + " (" + dose + ") @ " + time + " - " + remaining);
+            }
         }
         c.close();
         return list;
@@ -219,63 +310,31 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-    private String getNextRemainingTime(String times) {
-        if (times == null || times.isEmpty())
-            return "No times set";
-
+    private String getRemainingForSingleTime(String timeStr) {
+        if (timeStr == null || timeStr.isEmpty())
+            return "No time set";
         try {
             Date now = new Date();
             long nowMs = now.getTime();
 
-            SimpleDateFormat sdfTime = new SimpleDateFormat("hh:mm a", Locale.getDefault());
             SimpleDateFormat sdfFull = new SimpleDateFormat("yyyy-MM-dd hh:mm a", Locale.getDefault());
             String todayStr = (selectedDateGlobal != null)
                     ? selectedDateGlobal
                     : new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-            for (String t : times.split(",")) {
-                Date full = sdfFull.parse(todayStr + " " + t.trim());
-                if (full == null) continue;
-                if (full.getTime() > nowMs) {
-                    long diff = full.getTime() - nowMs;
-                    long hrs = diff / (1000 * 60 * 60);
-                    long mins = (diff / (1000 * 60)) % 60;
-                    long secs = (diff / 1000) % 60;
-                    return String.format(Locale.getDefault(), "Remaining: %02d:%02d:%02d", hrs, mins, secs);
-                }
+            Date full = sdfFull.parse(todayStr + " " + timeStr);
+            if (full == null) return "Time error";
+            if (full.getTime() > nowMs) {
+                long diff = full.getTime() - nowMs;
+                long hrs = diff / (1000 * 60 * 60);
+                long mins = (diff / (1000 * 60)) % 60;
+                long secs = (diff / 1000) % 60;
+                return String.format(Locale.getDefault(), "Remaining: %02d:%02d:%02d", hrs, mins, secs);
             }
             return "All times passed";
         } catch (Exception e) {
             return "Time error";
         }
-    }
-
-    public List<String> getUpcomingMedicines() {
-        String today = todayDate();
-        SQLiteDatabase db = this.getReadableDatabase();
-        List<String> list = new ArrayList<>();
-        Cursor c = db.rawQuery(
-                "SELECT name, dosage FROM " + TABLE_MEDICINES + " WHERE startDate > ?", new String[]{today});
-        while (c.moveToNext()) {
-            list.add(c.getString(0) + " (" + c.getString(1) + ")");
-        }
-        c.close();
-        return list;
-    }
-
-    public List<String> getMissedMedicines() {
-        String today = todayDate();
-        SQLiteDatabase db = this.getReadableDatabase();
-        List<String> list = new ArrayList<>();
-        Cursor c = db.rawQuery(
-                "SELECT name, dosage FROM " + TABLE_MEDICINES +
-                        " WHERE endDate IS NOT NULL AND endDate <> '' AND endDate < ?",
-                new String[]{today});
-        while (c.moveToNext()) {
-            list.add(c.getString(0) + " (" + c.getString(1) + ")");
-        }
-        c.close();
-        return list;
     }
 
     public List<String> getLowStockMedicines() {
@@ -291,15 +350,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return list;
     }
 
-    // ===== Dashboard Counts =====
-    public int getAllMedicinesCount() {
-        SQLiteDatabase db = this.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_MEDICINES, null);
-        int count = c.moveToFirst() ? c.getInt(0) : 0;
-        c.close();
-        return count;
-    }
-
     public int getLowStockCount() {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor c = db.rawQuery(
@@ -309,7 +359,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return count;
     }
 
-    // ===== Medicine Object Lists =====
     public boolean deleteMedicineByName(String name) {
         SQLiteDatabase db = this.getWritableDatabase();
         int result = db.delete(TABLE_MEDICINES, "name=?", new String[]{name});
@@ -362,7 +411,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         List<Medicine> list = new ArrayList<>();
         Cursor c = db.rawQuery(
                 "SELECT name, dosage, notes, currentStock, type, times FROM " + TABLE_MEDICINES +
-                        " WHERE startDate > ?", new String[]{today});
+                        " WHERE startDate > ?",
+                new String[]{today});
         if (c.moveToFirst()) {
             do {
                 list.add(new Medicine(
@@ -411,5 +461,65 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         c.close();
         return list;
+    }
+
+    public boolean isInstanceResolved(String name, String time, String date) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT result FROM medicine_status WHERE name=? AND time=? AND date=? LIMIT 1",
+                new String[]{name, time, date});
+        boolean resolved = false;
+        if (c.moveToFirst()) {
+            String r = c.getString(0);
+            resolved = "taken".equals(r) || "missed".equals(r);
+        }
+        c.close();
+        return resolved;
+    }
+
+    public List<String> getActionableInstancesForToday() {
+        String today = todayDate();
+        SQLiteDatabase db = this.getReadableDatabase();
+        List<String> list = new ArrayList<>();
+
+        Cursor c = db.rawQuery(
+                "SELECT name, dosage, times FROM medicines " +
+                        "WHERE startDate <= ? AND (endDate IS NULL OR endDate='' OR endDate >= ?)",
+                new String[]{today, today});
+
+        while (c.moveToNext()) {
+            String name = c.getString(0);
+            String dose = c.getString(1);
+            String times = c.getString(2);
+            if (times == null || times.trim().isEmpty()) continue;
+
+            for (String t : times.split(",")) {
+                String time = t.trim();
+                if (isInstanceResolved(name, time, today)) continue;
+
+                String remaining = getRemainingForSingleTime(time);
+                list.add(name + " (" + dose + ") @ " + time + " - " + remaining);
+            }
+        }
+        c.close();
+        return list;
+    }
+
+    // Decrease stock by 1 for the given medicine, if possible
+    private void decreaseMedicineStock(String name) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT currentStock FROM " + TABLE_MEDICINES + " WHERE name=? LIMIT 1",
+                new String[]{name});
+        if (c.moveToFirst()) {
+            int stock = c.getInt(0);
+            if (stock > 0) {
+                int newStock = stock - 1;
+                ContentValues cv = new ContentValues();
+                cv.put(MED_STOCK, newStock);
+                db.update(TABLE_MEDICINES, cv, "name=?", new String[]{name});
+            }
+        }
+        c.close();
     }
 }

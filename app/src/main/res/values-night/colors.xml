@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- same name, darker value for night mode -->
+    <color name="white">#121212</color>
+</resources>

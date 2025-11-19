@@ -1,0 +1,66 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Read‑only fields -->
+        <EditText
+            android:id="@+id/etEditName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Medicine Name"
+            android:enabled="false"
+            android:textColor="@android:color/darker_gray"/>
+
+        <EditText
+            android:id="@+id/etEditDosage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Dosage"
+            android:enabled="false"
+            android:textColor="@android:color/darker_gray"/>
+
+        <EditText
+            android:id="@+id/etEditType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Type"
+            android:enabled="false"
+            android:textColor="@android:color/darker_gray"/>
+
+        <EditText
+            android:id="@+id/etEditTimes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Times"
+            android:enabled="false"
+            android:textColor="@android:color/darker_gray"/>
+
+        <!-- Editable fields -->
+        <EditText
+            android:id="@+id/etEditNotes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Notes" />
+
+        <EditText
+            android:id="@+id/etEditStock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Current Stock"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/etEditLowStock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Low Stock Alert"
+            android:inputType="number" />
+
+    </LinearLayout>
+</ScrollView>
