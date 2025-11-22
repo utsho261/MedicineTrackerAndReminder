@@ -22,6 +22,7 @@ public class ProfileActivity extends AppCompatActivity {
     private MaterialButton btnEdit, btnClear;
     private DatabaseHelper db;
     private SharedPreferences prefs;
+    long uid = SessionManager.get();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +45,18 @@ public class ProfileActivity extends AppCompatActivity {
                 prefs.edit().putBoolean("darkMode", isChecked).apply();
                 ThemeManager.apply(isChecked);
             }
+        });
+
+        MaterialButton btnLogout = findViewById(R.id.btnLogout);
+        btnLogout.setOnClickListener(v -> {
+            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+            prefs.edit().remove("loggedIn").remove("userId").apply();
+            SessionManager.set(-1);
+            Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+            Intent i = new Intent(this, LoginActivity.class);
+            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(i);
+            finish();
         });
 
         // Clear all data with confirmation
@@ -94,7 +107,7 @@ public class ProfileActivity extends AppCompatActivity {
         TextView tvPhone = findViewById(R.id.tvPhone);
         TextView tvDob = findViewById(R.id.tvDob);
 
-        try (var c = db.getSingleUserCursor()) {
+        try (var c = db.getSingleUserCursor(uid)) {
             if (c != null && c.moveToFirst()) {
                 tvName.setText(c.getString(0) + " " + c.getString(1));
                 tvDob.setText(c.getString(2));

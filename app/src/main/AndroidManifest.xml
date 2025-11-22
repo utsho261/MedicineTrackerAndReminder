@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.medicinetrackerandreminder">
 
-    <!-- Permission for notifications -->
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
@@ -13,7 +14,7 @@
         android:theme="@style/Theme.MedicineTracker">
 
         <activity
-            android:name=".DashboardActivity"
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,18 +22,24 @@
             </intent-filter>
         </activity>
 
+        <!-- Authentication -->
+        <activity android:name=".RegisterActivity" />
+
+        <!-- Main app screens -->
+        <activity android:name=".DashboardActivity" />
         <activity android:name=".AddMedicineActivity" />
         <activity android:name=".CalendarActivity" />
         <activity android:name=".MyMedsActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".EditProfileActivity" />
 
-        <!-- Tell Android about your Receivers -->
+        <!-- Broadcast receivers for alarms and actions -->
         <receiver
             android:name=".receivers.MedicineAlarmReceiver"
             android:exported="false" />
         <receiver
             android:name=".receivers.MedicineActionReceiver"
             android:exported="false" />
+
     </application>
 </manifest>

@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -34,6 +35,7 @@ public class DashboardActivity extends AppCompatActivity {
     TextView tvProgress, tvUpcoming, tvMissed, tvLowStock, tvDate;
     LinearLayout scheduleContainer, emptyScheduleView;
     DatabaseHelper db;
+    long uid = SessionManager.get();
 
     private final android.os.Handler handler = new android.os.Handler();
     private final Runnable refreshTask = new Runnable() {
@@ -90,7 +92,7 @@ public class DashboardActivity extends AppCompatActivity {
 
         // === Statistic card click listeners ===
         findViewById(R.id.cardProgress).setOnClickListener(v -> {
-            List<String> takenToday = db.getTakenMedicinesForToday();
+            List<String> takenToday = db.getTakenMedicinesForToday(uid);
             if (takenToday == null || takenToday.isEmpty()) {
                 Toast.makeText(this, "No medicines taken today.", Toast.LENGTH_SHORT).show();
             } else {
@@ -108,10 +110,10 @@ public class DashboardActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.cardMissed).setOnClickListener(v ->
-                showListDialog("Missed Medicines (Today)", db.getMissedCardItemsForToday()));
+                showListDialog("Missed Medicines (Today)", db.getMissedCardItemsForToday(uid)));
 
         findViewById(R.id.cardLowStock).setOnClickListener(v ->
-                showListDialog("Low‑Stock Medicines", db.getLowStockMedicines()));
+                showListDialog("Low‑Stock Medicines", db.getLowStockMedicines(uid)));
     }
 
     private void setupBottomNavigation() {
@@ -150,7 +152,7 @@ public class DashboardActivity extends AppCompatActivity {
     private void refresh() {
         updateCounters();
 
-        List<String> todayList = db.getActionableInstancesForToday();
+        List<String> todayList = db.getActionableInstancesForToday(uid);
         scheduleContainer.removeAllViews();
 
         if (todayList == null || todayList.isEmpty()) {
@@ -165,14 +167,14 @@ public class DashboardActivity extends AppCompatActivity {
         for (String row : todayList) {
 
             // --- Parent Card ---
-            androidx.cardview.widget.CardView card = new androidx.cardview.widget.CardView(this);
+            CardView card = new CardView(this);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.setMargins(0, 8, 0, 8);
             card.setLayoutParams(lp);
             card.setRadius(16f);
-            card.setCardElevation(3f);
+            card.setCardElevation(4f);
             card.setUseCompatPadding(true);
 
             // --- Inside the card ---
@@ -180,20 +182,35 @@ public class DashboardActivity extends AppCompatActivity {
             inner.setOrientation(LinearLayout.VERTICAL);
             inner.setPadding(24, 20, 24, 20);
 
-            // medicine name + dosage highlighted
+            // Medicine name and dosage on first line
             TextView tvMedName = new TextView(this);
             tvMedName.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
             tvMedName.setTextColor(ContextCompat.getColor(this, R.color.black));
-            tvMedName.setText(row.split("-")[0].trim());
 
-            // remaining time styled lighter
+            // Remaining time on second line
             TextView tvRemain = new TextView(this);
             tvRemain.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Body2);
             tvRemain.setTextColor(ContextCompat.getColor(this, R.color.gray));
-            if (row.contains("Remaining"))
-                tvRemain.setText(row.substring(row.indexOf("Remaining")));
-            else
-                tvRemain.setText("Time info unavailable");
+
+            // Split and style
+            String line = row.trim();
+            String namePart = line;
+            String remainPart = "Time not available";
+
+            if (line.contains("🕒")) {
+                int idx = line.indexOf("🕒");
+                namePart = line.substring(0, idx).trim();
+                remainPart = line.substring(idx).trim();
+            } else if (line.contains("Remaining")) {
+                int idx = line.indexOf("Remaining");
+                namePart = line.substring(0, idx).trim();
+                remainPart = "🕒 " + line.substring(idx).trim();
+            } else if (line.contains("All times passed")) {
+                remainPart = "⏰ All times passed";
+            }
+
+            tvMedName.setText(namePart);
+            tvRemain.setText(remainPart);
 
             inner.addView(tvMedName);
             inner.addView(tvRemain);
@@ -202,23 +219,23 @@ public class DashboardActivity extends AppCompatActivity {
         }
     }
 
-
     // --- Counter update logic ---
     private void updateCounters() {
         String today = db.todayDate();
         SQLiteDatabase database = db.getReadableDatabase();
+        long uid = SessionManager.get();
 
         int taken = numericCount(database,
                 "SELECT COUNT(*) FROM medicine_status WHERE date=? AND result='taken'", today);
         int missed = numericCount(database,
                 "SELECT COUNT(*) FROM medicine_status WHERE date=? AND result='missed'", today);
-        int totalToday = db.getMedicinesForTodayDetailed().size();
+        int totalToday = db.getMedicinesForTodayDetailed(uid).size();
         int upcoming = Math.max(totalToday - taken - missed, 0);
 
         tvProgress.setText(String.valueOf(taken));
         tvUpcoming.setText(String.valueOf(upcoming));
         tvMissed.setText(String.valueOf(missed));
-        tvLowStock.setText(String.valueOf(db.getLowStockCount()));
+        tvLowStock.setText(String.valueOf(db.getLowStockCount(uid)));
     }
 
     private int numericCount(SQLiteDatabase db, String sql, String arg) {
@@ -228,22 +245,21 @@ public class DashboardActivity extends AppCompatActivity {
         return n;
     }
 
-    // --- Used by "Upcoming" card to display today's medicines with color‑coded status ---
     private List<String> getUpcomingMedicinesWithStatus() {
         List<String> result = new ArrayList<>();
-        List<String> todayList = db.getMedicinesForTodayDetailed();
-        List<String> takenList = db.getTakenMedicinesForToday();
+        long uid = SessionManager.get();
+        List<String> todayList = db.getMedicinesForTodayDetailed(uid);
+        List<String> takenList = db.getTakenMedicinesForToday(uid);
         for (String medicine : todayList) {
             if (takenList.contains(medicine))
-                result.add(medicine + " (Taken)");
+                result.add(medicine + " (✔ Taken)");
             else if (medicine.contains("All times passed"))
-                result.add(medicine + " (Missed)");
-            else result.add(medicine + " (Upcoming)");
+                result.add(medicine + " (✖ Missed)");
+            else result.add(medicine + " (🕒 Upcoming)");
         }
         return result;
     }
 
-    // --- Dialog used by statistic cards ---
     private void showListDialog(String title, List<String> list) {
         if (list == null || list.isEmpty()) {
             Toast.makeText(this, "No items found", Toast.LENGTH_SHORT).show();
@@ -257,7 +273,6 @@ public class DashboardActivity extends AppCompatActivity {
                 .show();
     }
 
-    // --- Runtime permission result ---
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions,

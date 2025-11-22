@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.Toast;
 import com.example.medicinetrackerandreminder.database.DatabaseHelper;
+import com.example.medicinetrackerandreminder.SessionManager;
 
 /**
  * Handles user actions from the medicine reminder notification.
@@ -21,13 +22,13 @@ public class MedicineActionReceiver extends BroadcastReceiver {
         String action  = intent.getAction();
 
         DatabaseHelper db = new DatabaseHelper(context);
-
+        long uid = SessionManager.get();
         if ("ACTION_TAKE".equals(action)) {
-            db.markMedicineTaken(medName, medTime, date);
+            db.markMedicineTaken(medName, medTime, date, uid);
             Toast.makeText(context, "Marked " + medName + " as taken", Toast.LENGTH_SHORT).show();
         }
         else if ("ACTION_SKIP".equals(action)) {
-            db.markMedicineMissed(medName, medTime, date);
+            db.markMedicineMissed(medName, medTime, date, uid);
             Toast.makeText(context, medName + " marked as missed", Toast.LENGTH_SHORT).show();
         }
 

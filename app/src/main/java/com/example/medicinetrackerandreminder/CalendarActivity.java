@@ -58,8 +58,8 @@ public class CalendarActivity extends AppCompatActivity {
                     .format(cal.getTime());
 
             tvSelectedDate.setText(getString(R.string.selected_date, formattedDate));
-
-            List<String> meds = db.getMedicinesForDate(formattedDate);
+            long uid = SessionManager.get();
+            List<String> meds = db.getMedicinesForDate(formattedDate, uid);
 
             if (meds.isEmpty()) {
                 new AlertDialog.Builder(this)

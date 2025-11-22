@@ -18,18 +18,18 @@ public class MyMedsActivity extends AppCompatActivity {
     RecyclerView recyclerView;
     MedAdapter adapter;
     EditText etSearch;
+    long uid = SessionManager.get();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_my_meds);
-
         db = new DatabaseHelper(this);
 
         recyclerView = findViewById(R.id.recyclerViewMeds);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new MedAdapter(db.getAllMedicineObjects(), this);
+        adapter = new MedAdapter(db.getAllMedicineObjects(uid), this);
         recyclerView.setAdapter(adapter);
 
         etSearch = findViewById(R.id.etSearch);
@@ -70,6 +70,6 @@ public class MyMedsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        adapter.setMedicines(db.getAllMedicineObjects());
+        adapter.setMedicines(db.getAllMedicineObjects(uid));
     }
 }

@@ -27,6 +27,8 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
     private List<Medicine> allMedicines;
     private final Context context;
 
+    // ✅  Remove those illegal lines that executed at class level
+
     public MedAdapter(List<Medicine> medicines, Context context) {
         this.medicines = medicines;
         this.allMedicines = new ArrayList<>(medicines);
@@ -43,10 +45,10 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
         query = query.toLowerCase();
         List<Medicine> filtered = new ArrayList<>();
         for (Medicine m : allMedicines) {
-            if (m.getName().toLowerCase().contains(query) ||
-                    m.getDosage().toLowerCase().contains(query) ||
-                    m.getNotes().toLowerCase().contains(query) ||
-                    m.getType().toLowerCase().contains(query)) {
+            if (m.getName().toLowerCase().contains(query)
+                    || m.getDosage().toLowerCase().contains(query)
+                    || m.getNotes().toLowerCase().contains(query)
+                    || m.getType().toLowerCase().contains(query)) {
                 filtered.add(m);
             }
         }
@@ -72,7 +74,6 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
         holder.tvNotes.setText(med.getNotes().isEmpty() ? "No notes" : med.getNotes());
         holder.tvStock.setText("Current Stock: " + med.getStock());
 
-        // --- Fetch and display low stock alert ---
         DatabaseHelper db = new DatabaseHelper(context);
         android.database.Cursor c = db.getReadableDatabase().rawQuery(
                 "SELECT lowStockAlert FROM medicines WHERE name=?",
@@ -82,43 +83,42 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
         }
         c.close();
 
-        // --- Delete button ---
-        holder.btnDelete.setOnClickListener(v -> new AlertDialog.Builder(context)
-                .setTitle("Delete Medicine")
-                .setMessage("Are you sure you want to delete this medicine?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    boolean deleted = db.deleteMedicineByName(med.getName());
-                    if (deleted) {
-                        medicines.remove(pos);
-                        notifyItemRemoved(pos);
-                        Toast.makeText(context, "Medicine deleted", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(context, "Failed to delete", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show());
+        // --- Delete button (per user now) ---
+        holder.btnDelete.setOnClickListener(v ->
+                new AlertDialog.Builder(context)
+                        .setTitle("Delete Medicine")
+                        .setMessage("Are you sure you want to delete this medicine?")
+                        .setPositiveButton("Delete", (dialog, which) -> {
+                            long uid = SessionManager.get();
+                            boolean deleted = db.deleteMedicineByName(med.getName(), uid);
+                            if (deleted) {
+                                medicines.remove(pos);
+                                notifyItemRemoved(pos);
+                                Toast.makeText(context, "Medicine deleted", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(context, "Failed to delete", Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show()
+        );
 
         // --- Edit button ---
         holder.btnEdit.setOnClickListener(v -> showEditDialog(med, pos));
     }
 
-    // ====================================================================
-    //  Edit dialog logic
-    // ====================================================================
     private void showEditDialog(Medicine med, int pos) {
         View dialogView = LayoutInflater.from(context)
                 .inflate(R.layout.dialog_edit_medicine, null);
 
-        EditText etName     = dialogView.findViewById(R.id.etEditName);
-        EditText etDosage   = dialogView.findViewById(R.id.etEditDosage);
-        EditText etType     = dialogView.findViewById(R.id.etEditType);
-        EditText etTimes    = dialogView.findViewById(R.id.etEditTimes);
-        EditText etNotes    = dialogView.findViewById(R.id.etEditNotes);
-        EditText etStock    = dialogView.findViewById(R.id.etEditStock);
+        EditText etName = dialogView.findViewById(R.id.etEditName);
+        EditText etDosage = dialogView.findViewById(R.id.etEditDosage);
+        EditText etType = dialogView.findViewById(R.id.etEditType);
+        EditText etTimes = dialogView.findViewById(R.id.etEditTimes);
+        EditText etNotes = dialogView.findViewById(R.id.etEditNotes);
+        EditText etStock = dialogView.findViewById(R.id.etEditStock);
         EditText etLowStock = dialogView.findViewById(R.id.etEditLowStock);
 
-        // Prefill all values
         etName.setText(med.getName());
         etDosage.setText(med.getDosage());
         etType.setText(med.getType());
@@ -138,7 +138,7 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
                 .setView(dialogView)
                 .setPositiveButton("Save", (dialog, which) -> {
                     try {
-                        int stock  = Integer.parseInt(etStock.getText().toString());
+                        int stock = Integer.parseInt(etStock.getText().toString());
                         int lowstk = Integer.parseInt(etLowStock.getText().toString());
 
                         android.content.ContentValues cv = new android.content.ContentValues();
@@ -146,13 +146,14 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
                         cv.put("currentStock", stock);
                         cv.put("lowStockAlert", lowstk);
 
+                        long uid = SessionManager.get();
                         int updated = db.getWritableDatabase()
-                                .update("medicines", cv, "name=?",
-                                        new String[]{med.getName()});
+                                .update("medicines", cv,
+                                        "name=? AND userId=?",
+                                        new String[]{med.getName(), String.valueOf(uid)});
 
                         if (updated > 0) {
                             Toast.makeText(context, "Updated successfully", Toast.LENGTH_SHORT).show();
-                            // Refresh this item
                             medicines.set(pos, new Medicine(
                                     med.getName(),
                                     med.getDosage(),
@@ -172,30 +173,26 @@ public class MedAdapter extends RecyclerView.Adapter<MedAdapter.ViewHolder> {
                 .show();
     }
 
-
     @Override
     public int getItemCount() {
         return medicines == null ? 0 : medicines.size();
     }
 
-    // ====================================================================
-    //  ViewHolder
-    // ====================================================================
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvMedName, tvDosage, tvNotes, tvStock, tvType, tvTimes, tvLowStock;
         Button btnDelete, btnEdit;
 
         ViewHolder(View itemView) {
             super(itemView);
-            tvMedName  = itemView.findViewById(R.id.tvMedName);
-            tvDosage   = itemView.findViewById(R.id.tvDosage);
-            tvNotes    = itemView.findViewById(R.id.tvNotes);
-            tvStock    = itemView.findViewById(R.id.tvStock);
-            tvType     = itemView.findViewById(R.id.tvType);
-            tvTimes    = itemView.findViewById(R.id.tvTimes);
+            tvMedName = itemView.findViewById(R.id.tvMedName);
+            tvDosage = itemView.findViewById(R.id.tvDosage);
+            tvNotes = itemView.findViewById(R.id.tvNotes);
+            tvStock = itemView.findViewById(R.id.tvStock);
+            tvType = itemView.findViewById(R.id.tvType);
+            tvTimes = itemView.findViewById(R.id.tvTimes);
             tvLowStock = itemView.findViewById(R.id.tvLowStock);
-            btnDelete  = itemView.findViewById(R.id.btnDeleteMed);
-            btnEdit    = itemView.findViewById(R.id.btnEditMed);
+            btnDelete = itemView.findViewById(R.id.btnDeleteMed);
+            btnEdit = itemView.findViewById(R.id.btnEditMed);
         }
     }
 }
