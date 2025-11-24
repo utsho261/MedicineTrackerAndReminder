@@ -1,7 +1,10 @@
 package com.example.medicinetrackerandreminder;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -13,7 +16,6 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -26,10 +28,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Dashboard page showing today's schedule and summary stats.
- * Simplified (no Take / Missed buttons) but all cards clickable.
- */
 public class DashboardActivity extends AppCompatActivity {
 
     TextView tvProgress, tvUpcoming, tvMissed, tvLowStock, tvDate;
@@ -42,16 +40,16 @@ public class DashboardActivity extends AppCompatActivity {
         @Override
         public void run() {
             refresh();
-            handler.postDelayed(this, 60_000); // refresh every minute
+            handler.postDelayed(this, 60_000);
         }
     };
 
+    // ---------- Lifecycle ----------
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
-        // Request POST_NOTIFICATIONS for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                         != PackageManager.PERMISSION_GRANTED) {
@@ -66,6 +64,24 @@ public class DashboardActivity extends AppCompatActivity {
         refresh();
     }
 
+    @SuppressLint({"UnregisteredReceiver", "UnspecifiedRegisterReceiverFlag"})
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(dashboardRefreshReceiver,
+                new IntentFilter("com.example.medicinetrackerandreminder.REFRESH_DASHBOARD"));
+        refresh();
+        handler.postDelayed(refreshTask, 60_000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(dashboardRefreshReceiver);
+        handler.removeCallbacks(refreshTask);
+    }
+
+    // ---------- UI Initialization ----------
     private void bindViews() {
         tvProgress = findViewById(R.id.tvProgress);
         tvUpcoming = findViewById(R.id.tvUpcoming);
@@ -79,43 +95,41 @@ public class DashboardActivity extends AppCompatActivity {
         tvDate.setText(today);
     }
 
+    // ---------- Top Buttons and Summary Cards ----------
     private void setupTopButtons() {
-        findViewById(R.id.btnCalendar).setOnClickListener(
-                v -> startActivity(new Intent(this, CalendarActivity.class)));
-        findViewById(R.id.btnAddMedicine).setOnClickListener(
-                v -> startActivity(new Intent(this, AddMedicineActivity.class)));
-        findViewById(R.id.btnProfile).setOnClickListener(
-                v -> startActivity(new Intent(this, ProfileActivity.class)));
+        findViewById(R.id.btnCalendar)
+                .setOnClickListener(v -> startActivity(new Intent(this, CalendarActivity.class)));
+        findViewById(R.id.btnAddMedicine)
+                .setOnClickListener(v -> startActivity(new Intent(this, AddMedicineActivity.class)));
+        findViewById(R.id.btnProfile)
+                .setOnClickListener(v -> startActivity(new Intent(this, ProfileActivity.class)));
         findViewById(R.id.btnAddFirstMedicine)
-                .setOnClickListener(v ->
-                        startActivity(new Intent(this, AddMedicineActivity.class)));
+                .setOnClickListener(v -> startActivity(new Intent(this, AddMedicineActivity.class)));
 
-        // === Statistic card click listeners ===
         findViewById(R.id.cardProgress).setOnClickListener(v -> {
-            List<String> takenToday = db.getTakenMedicinesForToday(uid);
-            if (takenToday == null || takenToday.isEmpty()) {
-                Toast.makeText(this, "No medicines taken today.", Toast.LENGTH_SHORT).show();
-            } else {
-                showListDialog("Today's Progress (Taken)", takenToday);
-            }
+            List<String> taken = db.getTakenMedicinesForToday(uid);
+            showListDialog("✅ Medicines Taken Today", taken);
         });
 
         findViewById(R.id.cardUpcoming).setOnClickListener(v -> {
-            List<String> upcomingList = getUpcomingMedicinesWithStatus();
-            if (upcomingList == null || upcomingList.isEmpty()) {
-                Toast.makeText(this, "No upcoming medicines.", Toast.LENGTH_SHORT).show();
-            } else {
-                showListDialog("Upcoming Medicines", upcomingList);
-            }
+            List<String> all = db.getMedicinesForTodayDetailed(uid);
+            List<String> upcoming = new ArrayList<>();
+            for (String s : all) if (!s.startsWith("✔") && !s.startsWith("✖")) upcoming.add(s);
+            showListDialog("🕒 Upcoming Medicines", upcoming);
         });
 
-        findViewById(R.id.cardMissed).setOnClickListener(v ->
-                showListDialog("Missed Medicines (Today)", db.getMissedCardItemsForToday(uid)));
+        findViewById(R.id.cardMissed).setOnClickListener(v -> {
+            List<String> missed = db.getMissedCardItemsForToday(uid);
+            showListDialog("❌ Missed Medicines", missed);
+        });
 
-        findViewById(R.id.cardLowStock).setOnClickListener(v ->
-                showListDialog("Low‑Stock Medicines", db.getLowStockMedicines(uid)));
+        findViewById(R.id.cardLowStock).setOnClickListener(v -> {
+            List<String> low = db.getLowStockMedicines(uid);
+            showListDialog("📦 Low Stock Medicines", low);
+        });
     }
 
+    // ---------- Bottom Navigation ----------
     private void setupBottomNavigation() {
         BottomNavigationView nav = findViewById(R.id.bottomNav);
         nav.setSelectedItemId(R.id.nav_home);
@@ -123,36 +137,20 @@ public class DashboardActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_calendar) {
                 startActivity(new Intent(this, CalendarActivity.class));
-                overridePendingTransition(0, 0);
             } else if (id == R.id.nav_meds) {
                 startActivity(new Intent(this, MyMedsActivity.class));
-                overridePendingTransition(0, 0);
             } else if (id == R.id.nav_profile) {
                 startActivity(new Intent(this, ProfileActivity.class));
-                overridePendingTransition(0, 0);
             }
+            overridePendingTransition(0, 0);
             return true;
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        refresh();
-        handler.postDelayed(refreshTask, 60_000);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        handler.removeCallbacks(refreshTask);
-    }
-
-    // ======================================================================
+    // ---------- Dashboard Refresh ----------
     private void refresh() {
         updateCounters();
-
-        List<String> todayList = db.getActionableInstancesForToday(uid);
+        List<String> todayList = db.getMedicinesForTodayDetailed(uid);
         scheduleContainer.removeAllViews();
 
         if (todayList == null || todayList.isEmpty()) {
@@ -165,66 +163,83 @@ public class DashboardActivity extends AppCompatActivity {
         scheduleContainer.setVisibility(android.view.View.VISIBLE);
 
         for (String row : todayList) {
+            String line = row.replace("✔", "").replace("✖", "").trim();
+            String medName = line;
+            String medTime = "";
+            if (line.contains("@")) {
+                String[] parts = line.split("@");
+                medName = parts[0].trim();
+                medTime = parts[1].trim();
+            }
 
-            // --- Parent Card ---
-            CardView card = new CardView(this);
+            String status;
+            int statusColor = ContextCompat.getColor(this, R.color.gray);
+            if (row.startsWith("✔")) {
+                status = "✅ Taken";
+                statusColor = ContextCompat.getColor(this, R.color.teal_primary);
+            } else if (row.startsWith("✖")) {
+                status = "❌ Missed";
+                statusColor = ContextCompat.getColor(this, android.R.color.holo_red_light);
+            } else {
+                status = "Remaining time: " + calculateRemainingTime(medTime);
+            }
+
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setPadding(24, 24, 24, 24);
+            item.setBackgroundResource(R.drawable.bg_white_rounded);
+
+            TextView nameTv = new TextView(this);
+            nameTv.setText(medName + " : " + medTime);
+            nameTv.setTextSize(16);
+            nameTv.setTextColor(ContextCompat.getColor(this, R.color.black));
+            nameTv.setTypeface(null, android.graphics.Typeface.BOLD);
+
+            TextView remainTv = new TextView(this);
+            remainTv.setText(status);
+            remainTv.setTextSize(13);
+            remainTv.setTextColor(statusColor);
+
+            item.addView(nameTv);
+            item.addView(remainTv);
+
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.setMargins(0, 8, 0, 8);
-            card.setLayoutParams(lp);
-            card.setRadius(16f);
-            card.setCardElevation(4f);
-            card.setUseCompatPadding(true);
+            item.setLayoutParams(lp);
 
-            // --- Inside the card ---
-            LinearLayout inner = new LinearLayout(this);
-            inner.setOrientation(LinearLayout.VERTICAL);
-            inner.setPadding(24, 20, 24, 20);
-
-            // Medicine name and dosage on first line
-            TextView tvMedName = new TextView(this);
-            tvMedName.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
-            tvMedName.setTextColor(ContextCompat.getColor(this, R.color.black));
-
-            // Remaining time on second line
-            TextView tvRemain = new TextView(this);
-            tvRemain.setTextAppearance(androidx.appcompat.R.style.TextAppearance_AppCompat_Body2);
-            tvRemain.setTextColor(ContextCompat.getColor(this, R.color.gray));
-
-            // Split and style
-            String line = row.trim();
-            String namePart = line;
-            String remainPart = "Time not available";
-
-            if (line.contains("🕒")) {
-                int idx = line.indexOf("🕒");
-                namePart = line.substring(0, idx).trim();
-                remainPart = line.substring(idx).trim();
-            } else if (line.contains("Remaining")) {
-                int idx = line.indexOf("Remaining");
-                namePart = line.substring(0, idx).trim();
-                remainPart = "🕒 " + line.substring(idx).trim();
-            } else if (line.contains("All times passed")) {
-                remainPart = "⏰ All times passed";
-            }
-
-            tvMedName.setText(namePart);
-            tvRemain.setText(remainPart);
-
-            inner.addView(tvMedName);
-            inner.addView(tvRemain);
-            card.addView(inner);
-            scheduleContainer.addView(card);
+            scheduleContainer.addView(item);
         }
     }
 
-    // --- Counter update logic ---
+    // ---------- Time Calculation ----------
+    private String calculateRemainingTime(String timeStr) {
+        if (timeStr == null || timeStr.isEmpty()) return "No time set";
+        try {
+            SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm a", Locale.getDefault());
+            SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Date now = new Date();
+            String todayStr = dateFmt.format(now);
+            Date target = fullFormat.parse(todayStr + " " + timeStr);
+            if (target == null) return "Time error";
+
+            long diffMs = target.getTime() - now.getTime();
+            if (diffMs <= 0) return "⏰ All times passed";
+
+            long hours = diffMs / (1000 * 60 * 60);
+            long minutes = (diffMs / (1000 * 60)) % 60;
+            long seconds = (diffMs / 1000) % 60;
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds);
+        } catch (Exception e) {
+            return "Time error";
+        }
+    }
+
+    // ---------- Counter Update ----------
     private void updateCounters() {
         String today = db.todayDate();
         SQLiteDatabase database = db.getReadableDatabase();
-        long uid = SessionManager.get();
-
         int taken = numericCount(database,
                 "SELECT COUNT(*) FROM medicine_status WHERE date=? AND result='taken'", today);
         int missed = numericCount(database,
@@ -245,21 +260,7 @@ public class DashboardActivity extends AppCompatActivity {
         return n;
     }
 
-    private List<String> getUpcomingMedicinesWithStatus() {
-        List<String> result = new ArrayList<>();
-        long uid = SessionManager.get();
-        List<String> todayList = db.getMedicinesForTodayDetailed(uid);
-        List<String> takenList = db.getTakenMedicinesForToday(uid);
-        for (String medicine : todayList) {
-            if (takenList.contains(medicine))
-                result.add(medicine + " (✔ Taken)");
-            else if (medicine.contains("All times passed"))
-                result.add(medicine + " (✖ Missed)");
-            else result.add(medicine + " (🕒 Upcoming)");
-        }
-        return result;
-    }
-
+    // ---------- Dialog Utilities ----------
     private void showListDialog(String title, List<String> list) {
         if (list == null || list.isEmpty()) {
             Toast.makeText(this, "No items found", Toast.LENGTH_SHORT).show();
@@ -273,6 +274,7 @@ public class DashboardActivity extends AppCompatActivity {
                 .show();
     }
 
+    // ---------- Permission Handling ----------
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions,
@@ -285,4 +287,16 @@ public class DashboardActivity extends AppCompatActivity {
                 Toast.makeText(this, "Permission required for reminders", Toast.LENGTH_LONG).show();
         }
     }
+
+    // ---------- Broadcast Receiver ----------
+    private final android.content.BroadcastReceiver dashboardRefreshReceiver =
+            new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if ("com.example.medicinetrackerandreminder.REFRESH_DASHBOARD"
+                            .equals(intent.getAction())) {
+                        refresh();
+                    }
+                }
+            };
 }

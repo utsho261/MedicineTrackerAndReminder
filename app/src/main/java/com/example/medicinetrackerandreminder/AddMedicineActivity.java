@@ -51,6 +51,7 @@ public class AddMedicineActivity extends AppCompatActivity {
         findViewById(R.id.btnCancel).setOnClickListener(v -> finish());
     }
 
+    // ---------- Date & Time field setup ----------
     private void showDatePicker(EditText target) {
         Calendar c = Calendar.getInstance();
         new DatePickerDialog(this,
@@ -77,52 +78,98 @@ public class AddMedicineActivity extends AppCompatActivity {
         }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
     }
 
+    // ---------- Main save logic with full validation ----------
     private void saveMedicine() {
         String name = ((EditText) findViewById(R.id.etMedicineName)).getText().toString().trim();
         String type = ((AutoCompleteTextView) findViewById(R.id.dropMedicineType)).getText().toString().trim();
         String dosage = ((EditText) findViewById(R.id.etDosage)).getText().toString().trim();
         String startStr = etStartDate.getText().toString().trim();
         String endStr = etEndDate.getText().toString().trim();
-        String start = DatabaseHelper.formatDate(startStr);
-        String end = endStr.isEmpty() ? "" : DatabaseHelper.formatDate(endStr);
         String stockStr = ((EditText) findViewById(R.id.etCurrentStock)).getText().toString().trim();
         String lowStr = ((EditText) findViewById(R.id.etLowStock)).getText().toString().trim();
         String freq = ((AutoCompleteTextView) findViewById(R.id.dropFrequency)).getText().toString().trim();
         String notes = ((EditText) findViewById(R.id.etNotes)).getText().toString().trim();
 
-        if (name.isEmpty()) { Toast.makeText(this, "Enter medicine name", Toast.LENGTH_SHORT).show(); return; }
+        // ---- Basic validation ----
+        if (name.isEmpty()) { toast("Enter medicine name"); return; }
+        if (dosage.isEmpty()) { toast("Enter dosage"); return; }
+        if (startStr.isEmpty()) { toast("Select start date"); return; }
+        if (freq.isEmpty()) { toast("Select frequency"); return; }
 
-        long uid = SessionManager.get();
-        if (db.medicineExists(name, uid)) {
-            Toast.makeText(this, "Medicine with this name already exists!", Toast.LENGTH_SHORT).show();
-            return;
+        // ---- Date validation ----
+        Date startDate = parseDate(startStr);
+        Date endDate = parseDate(endStr);
+        if (startDate == null) { toast("Invalid start date format"); return; }
+        if (!endStr.isEmpty() && endDate == null) { toast("Invalid end date format"); return; }
+        if (endDate != null && endDate.before(startDate)) {
+            toast("End date cannot be before start date"); return;
         }
 
-        if (dosage.isEmpty() || startStr.isEmpty() || freq.isEmpty()) {
-            Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show(); return;
-        }
+        // ---- Numeric validation ----
+        int stock = safeInt(stockStr, "Invalid stock number");
+        if (stock < 0) return;
+        int low = safeInt(lowStr, "Invalid low stock number");
+        if (low < 0) return;
+        if (low > stock) { toast("Low stock alert cannot exceed current stock"); return; }
 
-        int stock = stockStr.isEmpty() ? 0 : Integer.parseInt(stockStr);
-        int low = lowStr.isEmpty() ? 0 : Integer.parseInt(lowStr);
-
+        // ---- Time field validation ----
         List<String> times = new ArrayList<>();
         for (int i = 0; i < timesContainer.getChildCount(); i++) {
             EditText et = timesContainer.getChildAt(i).findViewById(R.id.etTime);
-            if (!et.getText().toString().trim().isEmpty())
-                times.add(et.getText().toString());
+            String tVal = et.getText().toString().trim();
+            if (!tVal.isEmpty()) times.add(tVal);
         }
-        if (times.isEmpty()) { Toast.makeText(this,"Add at least one time",Toast.LENGTH_SHORT).show(); return; }
+        if (times.isEmpty()) { toast("Add at least one time slot"); return; }
 
+        // ---- Duplicate medicine protect ----
+        long uid = SessionManager.get();
+        if (db.medicineExists(name, uid)) {
+            toast("Medicine with this name already exists!");
+            return;
+        }
+
+        // ---- Formatting for DB ----
+        String start = DatabaseHelper.formatDate(startStr);
+        String end = endStr.isEmpty() ? "" : DatabaseHelper.formatDate(endStr);
+
+        // ---- Database insert ----
         boolean ok = db.addMedicine(name, type, dosage, start, end, stock, low,
                 freq, String.join(",", times), 0, notes, uid);
 
         if (ok) {
             scheduleAlarms(name, times);
-            Toast.makeText(this, "Medicine saved successfully!", Toast.LENGTH_SHORT).show();
+            toast("Medicine saved successfully!");
             finish();
-        } else Toast.makeText(this, "Failed to save medicine!", Toast.LENGTH_SHORT).show();
+        } else toast("Failed to save medicine!");
     }
 
+    // ---------- Helper methods ----------
+    private Date parseDate(String s) {
+        if (s.trim().isEmpty()) return null;
+        try {
+            return new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private int safeInt(String text, String message) {
+        if (text.trim().isEmpty()) return 0;
+        try {
+            int v = Integer.parseInt(text);
+            if (v < 0) throw new NumberFormatException();
+            return v;
+        } catch (Exception e) {
+            toast(message);
+            return -1;
+        }
+    }
+
+    private void toast(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
+    // ---------- Alarm scheduling ----------
     @SuppressLint("ScheduleExactAlarm")
     private void scheduleAlarms(String medName, List<String> times) {
         AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
